@@ -1,0 +1,17 @@
+# Ignore Visual Studio user-specific files
+.vs/
+*.user
+*.suo
+
+# Ignore build output
+bin/
+obj/
+
+# Ignore temporary files
+*.log
+*.tmp
+
+# Ignore system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
