@@ -6,7 +6,7 @@ using TickConsoleApp.Models;
 
 namespace TickConsoleApp
 {
-    class Program
+    static class Program
     {
         static async Task Main()
         {
@@ -14,9 +14,9 @@ namespace TickConsoleApp
             Directory.CreateDirectory(Path.Combine(folder, "EURUSD"));
 
 
-            var start = new DateTime(2024, 1, 1);
+            var start = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             
-            var end = new DateTime(2025, 1, 31);
+            var end = new DateTime(2025, 1, 31, 0, 0, 0, DateTimeKind.Utc);
 
             var generator = new ReplayTickGenerator(start, end, folder, "EURUSD")
             {
