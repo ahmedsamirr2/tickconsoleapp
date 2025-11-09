@@ -6,15 +6,11 @@ using TickConsoleApp.Models;
 
 namespace TickConsoleApp.Services
 {
-    public class ReplayTickGenerator : ITickGenerator
+    public class ReplayTickGenerator(DateTime start, DateTime end, string rootFolder, string instrument) : ITickGenerator
     {
         public event EventHandler<TickEventArgs>? Tick;
         public double Speed { get; set; } = 1.0;
 
-        private readonly string _rootFolder;
-        private readonly string _instrument;
-        private DateTime _start;
-        private DateTime _end;
         private bool _isRunning;
 
         private StreamReader? _reader;
@@ -22,14 +18,6 @@ namespace TickConsoleApp.Services
         private string? _currentFilePath;
 
         private const string ResumeFile = "resume_state.txt";
-
-        public ReplayTickGenerator(DateTime start, DateTime end, string rootFolder, string instrument)
-        {
-            _start = start;
-            _end = end;
-            _rootFolder = rootFolder;
-            _instrument = instrument;
-        }
 
         public async Task Initialize()
         {
@@ -40,18 +28,18 @@ namespace TickConsoleApp.Services
         {
             if (File.Exists(ResumeFile))
             {
-                string[] parts = File.ReadAllText(ResumeFile).Split(',');
+                string[] parts = (await File.ReadAllTextAsync(ResumeFile)).Split(',');
                 if (parts.Length == 4)
                 {
-                    string instrument = parts[0];
                     string yearMonth = parts[1];
                     long position = long.Parse(parts[2]);
-                    _lastTime = DateTime.Parse(parts[3], null, DateTimeStyles.RoundtripKind);
-
-                    string filePath = Path.Combine(_rootFolder, instrument, $"{yearMonth}.csv");
+                    
+                    _lastTime = DateTime.Parse(parts[3], CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                    
+                    string filePath = Path.Combine(rootFolder, parts[0], $"{yearMonth}.csv");
                     if (File.Exists(filePath))
                     {
-                        Console.WriteLine($"Resuming from {filePath}...");
+                        Console.WriteLine($"Resuming from {filePath}..."); 
                         _currentFilePath = filePath;
                         _reader = new StreamReader(filePath);
                         _reader.BaseStream.Seek(position, SeekOrigin.Begin);
@@ -60,14 +48,17 @@ namespace TickConsoleApp.Services
                 }
             }
 
-            await OpenNextFileAsync(_start);
+            await OpenNextFileAsync(start);
         }
 
         private async Task OpenNextFileAsync(DateTime monthDate)
         {
-            string filePath = Path.Combine(_rootFolder, _instrument, $"{monthDate:yyyyMM}.csv");
+            string filePath = Path.Combine(rootFolder, instrument, $"{monthDate:yyyyMM}.csv");
             if (File.Exists(filePath))
             {
+                _reader?.Dispose();
+                _reader = null;
+                
                 _currentFilePath = filePath;
                 _reader = new StreamReader(filePath);
                 Console.WriteLine($"Loaded tick file: {filePath}");
@@ -138,6 +129,7 @@ namespace TickConsoleApp.Services
                 }
 
                 _lastTime = utcTime;
+
             }
 
             if (_isRunning)
@@ -149,13 +141,13 @@ namespace TickConsoleApp.Services
 
         private async Task MoveToNextMonthOrStopAsync()
         {
-            DateTime nextMonth = _start.AddMonths(1);
+            DateTime nextMonth = start.AddMonths(1);
 
-            if (nextMonth <= _end)
+            if (nextMonth <= end)
             {
                 Console.WriteLine("Switching to next month file...");
                 await OpenNextFileAsync(nextMonth);
-                _start = nextMonth;
+                start = nextMonth;
                 Start();
             }
             else
@@ -175,10 +167,12 @@ namespace TickConsoleApp.Services
             {
                 string monthName = Path.GetFileNameWithoutExtension(_currentFilePath);
                 File.WriteAllText(ResumeFile,
-                    $"{_instrument};{monthName};{_reader.BaseStream.Position};{_lastTime:O}");
+                    $"{instrument},{monthName},{_reader.BaseStream.Position},{_lastTime:O}");
+
             }
 
             Console.WriteLine("Stopped and saved resume state.");
+
         }
     }
 }

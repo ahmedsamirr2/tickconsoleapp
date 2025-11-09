@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 
 namespace TickConsoleApp.Models
 {
-    public readonly struct Tick
+    public readonly struct Tick   
     {
+        
+
         public double Value { get; init; }
         public DateTime Timestamp { get; init; }
 
